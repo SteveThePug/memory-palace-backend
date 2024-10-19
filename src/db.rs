@@ -16,7 +16,7 @@ pub struct Post {
 pub struct Comment {
     pub comment_id: Option<i64>,
     pub post_id: i64,
-    pub user_id: i64,
+    pub user_id: Option<i64>,
     pub content: String,
     pub created_at: Option<NaiveDateTime>,
 }

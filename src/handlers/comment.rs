@@ -7,6 +7,9 @@ use sqlx::SqlitePool;
 const N: u32 = 10;
 const GET_COMMENTS: &str = "SELECT * FROM comment LIMIT ?";
 const GET_COMMENT: &str = "SELECT * FROM comment WHERE comment_id = ?";
+const DELETE_COMMENT: &str = "DELETE FROM comment WHERE comment_id = ?";
+const INSERT_COMMENT: &str = "INSERT INTO comment (post_id, user_id, content) VALUES (?, ?, ?)";
+const UPDATE_COMMENT: &str = "UPDATE comment SET content = ? WHERE comment_id = ?";
 
 async fn check_user_owns_comment(
     pool: &SqlitePool,
@@ -17,7 +20,7 @@ async fn check_user_owns_comment(
         .bind(comment_id)
         .fetch_one(pool)
         .await?;
-    Ok(user_id == comment.user_id)
+    Ok(user_id == comment.user_id.unwrap())
 }
 
 #[get("/comments")]
@@ -36,13 +39,13 @@ async fn get_comments(pool: web::Data<SqlitePool>) -> HttpResponse {
         let mut comment_response = CommentResponse {
             comment_id: comment.comment_id.unwrap(),
             post_id: comment.post_id,
-            user_id: comment.user_id, // Assuming created_at is an Option<NaiveDateTime>
+            user_id: comment.user_id.unwrap(), // Assuming created_at is an Option<NaiveDateTime>
             created_at: comment.created_at.unwrap(),
             content: comment.content,
             author: String::new(), // Placeholder for author, will be set later
         };
 
-        comment_response.author = match get_username(pool.as_ref(), comment.user_id).await {
+        comment_response.author = match get_username(pool.as_ref(), comment.user_id.unwrap()).await {
             Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
             Ok(username) => username,
         };
@@ -59,6 +62,7 @@ async fn add_comment(
     comment: web::Json<Comment>,
 ) -> HttpResponse {
     let extentions = req.extensions();
+println!("Getting comment");
 
     let user = match extentions.get::<User>() {
         Some(user) => user,
@@ -67,8 +71,7 @@ async fn add_comment(
 
     let user_id = user.user_id;
 
-    let insert_query = "INSERT INTO comment (post_id, user_id, content) VALUES (?, ?, ?)";
-    match sqlx::query(insert_query)
+    match sqlx::query(INSERT_COMMENT)
         .bind(comment.post_id)
         .bind(user_id)
         .bind(&comment.content)
@@ -89,7 +92,7 @@ async fn add_comment(
             let comment_response = CommentResponse {
                 comment_id: inserted_comment.comment_id.unwrap(),
                 post_id: inserted_comment.post_id,
-                user_id: inserted_comment.user_id,
+                user_id: inserted_comment.user_id.unwrap(),
                 content: inserted_comment.content.clone(),
                 created_at: inserted_comment.created_at.unwrap(),
                 author: user.username.clone(),
@@ -124,8 +127,7 @@ async fn delete_comment(
         _ => (),
     }
 
-    let delete_query = "DELETE FROM comment WHERE id = ?";
-    match sqlx::query(delete_query)
+    match sqlx::query(DELETE_COMMENT)
         .bind(comment_id)
         .execute(pool.get_ref())
         .await
@@ -159,8 +161,7 @@ async fn edit_comment(
         Ok(true) => (),
     };
 
-    let update_query = "UPDATE comment SET content = ? WHERE id = ?";
-    match sqlx::query(update_query)
+    match sqlx::query(UPDATE_COMMENT)
         .bind(&comment.content)
         .bind(comment_id)
         .execute(pool.get_ref())
@@ -181,7 +182,7 @@ async fn edit_comment(
             let comment_response = CommentResponse {
                 comment_id: updated_comment.comment_id.unwrap(),
                 post_id: updated_comment.post_id,
-                user_id: updated_comment.user_id,
+                user_id: updated_comment.user_id.unwrap(),
                 content: updated_comment.content,
                 created_at: updated_comment.created_at.unwrap(),
                 author: user.username.clone(),

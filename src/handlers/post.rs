@@ -64,12 +64,12 @@ async fn get_post_comments(
     let mut comment_responses = Vec::new();
 
     for comment in comments {
-        let author = get_username(pool, comment.user_id).await?;
+        let author = get_username(pool, comment.user_id.unwrap()).await?;
 
         let comment_response = CommentResponse {
             post_id: comment.post_id,
             comment_id: comment.comment_id.unwrap(),
-            user_id: comment.user_id,
+            user_id: comment.user_id.unwrap(),
             created_at: comment.created_at.unwrap(),
             content: comment.content,
             author,
