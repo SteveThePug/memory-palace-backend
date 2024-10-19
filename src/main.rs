@@ -32,11 +32,13 @@ async fn main() -> std::io::Result<()> {
     };
 
     let ip = "0.0.0.0"; // Changed to bind to all available interfaces
+
     println!("Hosting server on http://{}:{}", ip, port);
     HttpServer::new(move || {
+        let cors_url = std::env::var("CORS_URL").expect("CORS_URL must be set").into_bytes();
         let cors = Cors::default()
-            .allowed_origin_fn(|origin, _req_head| {
-                origin.as_bytes().ends_with(b"localhost:3000") // Allow any subdomain of localhost:3000
+            .allowed_origin_fn(move |origin, _req_head| {
+                origin.as_bytes().ends_with(&cors_url) // Allow any subdomain of localhost:3000
             })
             .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "PATCH"])
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::CONTENT_TYPE])
