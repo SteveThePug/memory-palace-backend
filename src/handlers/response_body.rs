@@ -2,8 +2,6 @@ use serde::{Serialize, Deserialize};
 use chrono::NaiveDateTime;
 
 pub const CONFIRM_DELETE: &str = "DELETE success";
-pub const CONFIRM_UPDATE: &str = "UPDATE success";
-pub const CONFIRM_INSERT: &str = "INSERT success";
 
 // pub const USER_NOT_FOUND: &str = "User not found";
 // pub const POST_NOT_FOUND: &str = "Post not found";

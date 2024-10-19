@@ -166,7 +166,29 @@ async fn edit_comment(
         .execute(pool.get_ref())
         .await
     {
-        Ok(_) => HttpResponse::Ok().body(CONFIRM_UPDATE),
+        Ok(_) => {
+            // Retrieve the updated comment
+            let updated_comment: Comment = match sqlx::query_as(GET_COMMENT)
+                .bind(comment_id)
+                .fetch_one(pool.get_ref())
+                .await
+            {
+                Ok(comment) => comment,
+                Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
+            };
+
+            // Construct the CommentResponse
+            let comment_response = CommentResponse {
+                comment_id: updated_comment.comment_id.unwrap(),
+                post_id: updated_comment.post_id,
+                user_id: updated_comment.user_id,
+                content: updated_comment.content,
+                created_at: updated_comment.created_at.unwrap(),
+                author: user.username.clone(),
+            };
+
+            HttpResponse::Ok().json(comment_response)
+        }
         Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
     }
 }

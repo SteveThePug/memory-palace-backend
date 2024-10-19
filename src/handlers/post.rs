@@ -199,9 +199,8 @@ async fn edit_post(
     // Check if the user owns the post
     match check_user_owns_post(&pool, user.user_id.unwrap(), post_id).await {
         Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
-        Ok(false) => return HttpResponse::ImATeapot().body(USER_MISMATCH),
+        Ok(false) => return HttpResponse::Unauthorized().body(USER_MISMATCH),
         Ok(true) => {
-
             match sqlx::query(UPDATE_POST)
                 .bind(&post.title)
                 .bind(&post.markdown)
@@ -209,7 +208,31 @@ async fn edit_post(
                 .execute(pool.as_ref())
                 .await
             {
-                Ok(_) => HttpResponse::Ok().body(CONFIRM_UPDATE),
+                Ok(_) => {
+                    // Retrieve the updated post
+                    let updated_post: Post = match sqlx::query_as(GET_POST)
+                        .bind(post_id)
+                        .fetch_one(pool.as_ref())
+                        .await
+                    {
+                        Ok(post) => post,
+                        Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
+                    };
+
+                    // Construct the PostResponse
+                    let post_response = PostResponse {
+                        post_id: updated_post.post_id.unwrap(),
+                        user_id: updated_post.user_id.unwrap(),
+                        title: updated_post.title,
+                        markdown: updated_post.markdown,
+                        created_at: updated_post.created_at.unwrap(),
+                        updated_at: updated_post.updated_at.unwrap(),
+                        author: user.username.clone(),
+                        comments: vec![], // Assuming no comments initially
+                    };
+
+                    HttpResponse::Ok().json(post_response)
+                }
                 Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
             }
         }
