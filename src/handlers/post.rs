@@ -33,7 +33,6 @@ const GET_POSTS: &str = "
     LIMIT ?
 ";
 
-
 const GET_POST_COMMENTS: &str = "
     SELECT *
     FROM comment
@@ -53,7 +52,10 @@ pub async fn check_user_owns_post(
     Ok(post.user_id.unwrap() == user_id)
 }
 
-async fn get_post_comments(pool: &SqlitePool, post_id: i64) -> Result<Vec<CommentResponse>, sqlx::Error> {
+async fn get_post_comments(
+    pool: &SqlitePool,
+    post_id: i64,
+) -> Result<Vec<CommentResponse>, sqlx::Error> {
     let comments: Vec<Comment> = sqlx::query_as(GET_POST_COMMENTS)
         .bind(post_id)
         .fetch_all(pool)
@@ -78,7 +80,6 @@ async fn get_post_comments(pool: &SqlitePool, post_id: i64) -> Result<Vec<Commen
 
     Ok(comment_responses)
 }
-
 
 #[get("/posts")]
 async fn get_posts(pool: web::Data<SqlitePool>) -> HttpResponse {
@@ -111,7 +112,8 @@ async fn get_posts(pool: web::Data<SqlitePool>) -> HttpResponse {
             Ok(username) => username,
         };
 
-        post_response.comments = match get_post_comments(pool.as_ref(), post.post_id.unwrap()).await {
+        post_response.comments = match get_post_comments(pool.as_ref(), post.post_id.unwrap()).await
+        {
             Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
             Ok(coms) => coms,
         };
@@ -126,10 +128,11 @@ async fn get_post(pool: web::Data<SqlitePool>, post_id: web::Path<i64>) -> HttpR
     let post: Post = match sqlx::query_as(GET_POST)
         .bind(post_id.into_inner())
         .fetch_one(pool.as_ref())
-        .await {
-            Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
-            Ok(post) => post,
-        };
+        .await
+    {
+        Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
+        Ok(post) => post,
+    };
 
     let mut post_response = PostResponse {
         post_id: post.post_id.unwrap(),
@@ -166,14 +169,18 @@ async fn delete_post(
 
     let user = match ext.get::<User>() {
         None => return HttpResponse::Unauthorized().body(INVALID_AUTH),
-        Some(u) => u
+        Some(u) => u,
     };
 
     match check_user_owns_post(&pool, user.user_id.unwrap(), post_id).await {
         Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
         Ok(false) => return HttpResponse::Unauthorized().body(USER_MISMATCH),
         Ok(true) => {
-            match sqlx::query(DELETE_POST).bind(post_id).execute(pool.as_ref()).await {
+            match sqlx::query(DELETE_POST)
+                .bind(post_id)
+                .execute(pool.as_ref())
+                .await
+            {
                 Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
                 Ok(_) => return HttpResponse::Ok().body({}),
             }
@@ -239,7 +246,6 @@ async fn edit_post(
     }
 }
 
-
 #[post("/post")]
 async fn add_post(
     req: HttpRequest,
@@ -250,7 +256,7 @@ async fn add_post(
 
     let user = match ext.get::<User>() {
         None => return HttpResponse::Unauthorized().body(INVALID_AUTH),
-        Some(u) => u
+        Some(u) => u,
     };
 
     let result = match sqlx::query(ADD_POST)

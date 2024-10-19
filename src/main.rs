@@ -1,25 +1,28 @@
 mod handlers {
-    pub mod post;
-    pub mod user;
     pub mod comment;
+    pub mod post;
     pub mod response_body;
+    pub mod user;
 }
 pub mod auth;
 pub mod db;
 
+use actix_cors::Cors;
+use actix_web::http;
 use actix_web::middleware::{self};
 use actix_web::{web, App, HttpServer};
 use dotenv::dotenv;
 use handlers::{comment, post, user};
-use actix_cors::Cors;
-use actix_web::http;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
     let db_url = std::env::var("DB_URL").expect("DB_URL must be set");
-    let port: u16 = std::env::var("PORT").expect("PORT must be set").parse().expect("PORT should be an unsigned integer");
+    let port: u16 = std::env::var("PORT")
+        .expect("PORT must be set")
+        .parse()
+        .expect("PORT should be an unsigned integer");
 
     let db = match db::init(&db_url).await {
         Ok(pool) => pool,
@@ -35,13 +38,18 @@ async fn main() -> std::io::Result<()> {
 
     println!("Hosting server on http://{}:{}", ip, port);
     HttpServer::new(move || {
-        let cors_url = std::env::var("CORS_URL").expect("CORS_URL must be set").into_bytes();
+        let cors_url = std::env::var("CORS_URL")
+            .expect("CORS_URL must be set")
+            .into_bytes();
         let cors = Cors::default()
             .allowed_origin_fn(move |origin, _req_head| {
                 origin.as_bytes().ends_with(&cors_url) // Allow any subdomain of localhost:3000
             })
             .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "PATCH"])
-            .allowed_headers(vec![http::header::AUTHORIZATION, http::header::CONTENT_TYPE])
+            .allowed_headers(vec![
+                http::header::AUTHORIZATION,
+                http::header::CONTENT_TYPE,
+            ])
             .max_age(3600);
 
         App::new()
@@ -63,11 +71,10 @@ async fn main() -> std::io::Result<()> {
                     .service(comment::delete_comment)
                     .service(post::add_post)
                     .service(post::edit_post)
-                    .service(post::delete_post)
+                    .service(post::delete_post),
             )
     })
     .bind((ip, port))?
     .run()
     .await
 }
-

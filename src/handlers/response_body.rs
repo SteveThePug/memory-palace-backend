@@ -1,5 +1,5 @@
-use serde::{Serialize, Deserialize};
 use chrono::NaiveDateTime;
+use serde::{Deserialize, Serialize};
 
 pub const CONFIRM_DELETE: &str = "DELETE success";
 
@@ -28,7 +28,7 @@ pub struct PostResponse {
     // Retrieve from User table on user_id
     pub author: String,
     // Retrieve from Comment table on post_id
-    pub comments: Vec<CommentResponse>
+    pub comments: Vec<CommentResponse>,
 }
 
 #[derive(sqlx::FromRow, Serialize, Deserialize, Debug, Default)]
@@ -40,7 +40,7 @@ pub struct CommentResponse {
     pub content: String,
     pub created_at: NaiveDateTime,
     // Retrieve from User table from user_id
-    pub author: String
+    pub author: String,
 }
 
 #[derive(sqlx::FromRow, Serialize, Deserialize, Debug, Default)]
@@ -48,11 +48,11 @@ pub struct UserResponse {
     // Included in User table
     pub user_id: i64,
     pub username: String,
-    pub created_at: NaiveDateTime
+    pub created_at: NaiveDateTime,
 }
 
 #[derive(Serialize)]
 pub struct TokenResponse {
     pub user: UserResponse,
-    pub token: String
+    pub token: String,
 }

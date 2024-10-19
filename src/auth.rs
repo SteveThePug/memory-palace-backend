@@ -1,28 +1,36 @@
-use actix_web::{
-    body::BoxBody, dev::{ServiceRequest, ServiceResponse}, http::header::AUTHORIZATION, middleware::Next, Error, HttpMessage, HttpResponse
-};
 use crate::db::User;
-use std::env;
+use actix_web::{
+    body::BoxBody,
+    dev::{ServiceRequest, ServiceResponse},
+    http::header::AUTHORIZATION,
+    middleware::Next,
+    Error, HttpMessage, HttpResponse,
+};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData};
+use std::env;
 
-pub fn make_token(
-    content: &User
-) -> Result<String, jsonwebtoken::errors::Error> {
+pub fn make_token(content: &User) -> Result<String, jsonwebtoken::errors::Error> {
     // Generate JWT token
     let secret = env::var("STP_SECRET").expect("Failed to get environment variable STP_SECRET");
-    let token = encode(&Header::default(), content, &EncodingKey::from_secret(secret.as_ref()))?;
+    let token = encode(
+        &Header::default(),
+        content,
+        &EncodingKey::from_secret(secret.as_ref()),
+    )?;
     Ok(token)
 }
 
-pub fn decode_token(
-    token: &str
-) -> Result<TokenData<User>, jsonwebtoken::errors::Error> {
+pub fn decode_token(token: &str) -> Result<TokenData<User>, jsonwebtoken::errors::Error> {
     // Verify JWT token
     let secret = env::var("STP_SECRET").expect("Failed to get environment variable STP_SECRET");
     let mut validation = jsonwebtoken::Validation::default();
     validation.validate_exp = false;
     validation.set_required_spec_claims(&[""]);
-    let token_data = decode(&token, &DecodingKey::from_secret(secret.as_ref()), &validation)?;
+    let token_data = decode(
+        &token,
+        &DecodingKey::from_secret(secret.as_ref()),
+        &validation,
+    )?;
     Ok(token_data)
 }
 
